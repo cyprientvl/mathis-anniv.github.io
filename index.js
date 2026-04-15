@@ -8,9 +8,31 @@ const backdrop = document.querySelector(".backdrop");
 let currentIndex = 0;
 let nbMedia = 0;
 let height = window.innerHeight;
-let userInteracted = false; // 🔥 IMPORTANT
 
-/* ---------------- UTIL ---------------- */
+// 🔥 IMPORTANT: déblocage global autoplay
+let userInteracted = false;
+
+/* ---------------- UNLOCK GLOBAL AUTOPLAY ---------------- */
+
+function unlockVideos() {
+  if (userInteracted) return;
+  userInteracted = true;
+
+  const currentSlide = slides[currentIndex];
+  const video = currentSlide?.querySelector("video");
+
+  if (video) {
+    video.muted = false;
+    video.play().catch(() => {});
+    playIcon.style.display = "none";
+  }
+}
+
+window.addEventListener("click", unlockVideos, { once: true });
+window.addEventListener("touchstart", unlockVideos, { once: true });
+window.addEventListener("keydown", unlockVideos, { once: true });
+
+/* ---------------- UTILS ---------------- */
 
 function isVideo(url) {
   return url.endsWith(".mp4") || url.endsWith(".webm");
@@ -23,7 +45,6 @@ function randomCount() {
 function randomSmall() {
   return Math.floor(Math.random() * 500 + 10);
 }
-
 /* ---------------- GENERATE ---------------- */
 function generateSlides(dataArray) {
   const container = document.getElementById("container");
@@ -88,6 +109,8 @@ function generateSlides(dataArray) {
     container.appendChild(slide);
   });
 }
+/* ---------------- SHUFFLE ---------------- */
+
 function shuffleArray(array) {
   for (let i = array.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
@@ -96,7 +119,7 @@ function shuffleArray(array) {
   return array;
 }
 
-/* ---------------- FETCH ---------------- */
+/* ---------------- FETCH DATA ---------------- */
 
 fetch("data.json")
 .then(res => res.json())
@@ -108,28 +131,13 @@ fetch("data.json")
   nbMedia = shuffledData.length + data.static.length;
   slides = document.querySelectorAll(".slide");
 
-  initVideos(); // 🔥 IMPORTANT
   updateSlides();
   initLikes();
   initFav();
-});
+})
+.catch(err => console.error(err));
 
-/* ---------------- VIDEO FIX ---------------- */
-
-function initVideos() {
-  slides.forEach((slide, index) => {
-    const video = slide.querySelector("video");
-
-    if (video) {
-      video.muted = true;
-      video.play().catch(() => {
-        // normal si bloqué
-      });
-    }
-  });
-}
-
-/* ---------------- UPDATE ---------------- */
+/* ---------------- SLIDES ---------------- */
 
 function updateSlides() {
   updatePCountText();
@@ -139,25 +147,23 @@ function updateSlides() {
 
     const video = slide.querySelector("video");
 
-    if (video) {
-      if (index === currentIndex) {
-        video.currentTime = 0;
+    if (!video) return;
 
-        if (userInteracted) {
-          video.muted = false;
-        }
+    // STOP toutes les vidéos
+    video.pause();
+    video.currentTime = 0;
 
-        video.play().catch(() => {
+    // PLAY uniquement active
+    if (index === currentIndex) {
+
+      video.muted = !userInteracted;
+
+      const playPromise = video.play();
+
+      if (playPromise !== undefined) {
+        playPromise.catch(() => {
           playIcon.style.display = "block";
         });
-
-        if(index == 0){
-          video.pause()
-        }
-
-      } else {
-        video.pause();
-        video.currentTime = 0;
       }
     }
   });
@@ -171,8 +177,6 @@ function updateSlides() {
       const video = slide.querySelector("video");
       if (video) video.pause();
     });
-
-    playIcon.style.display = "block";
   }
 }
 
@@ -195,11 +199,9 @@ hammer.on("swipedown", () => {
   }
 });
 
-/* ---------------- TAP ---------------- */
+/* ---------------- TAP PLAY/PAUSE ---------------- */
 
 hammer.on("tap", (ev) => {
-  userInteracted = true; // 🔥 DEBLOQUE SON
-
   const currentSlide = slides[currentIndex];
   const video = currentSlide.querySelector("video");
 
@@ -216,6 +218,8 @@ hammer.on("tap", (ev) => {
     y < rect.height * 0.7;
 
   if (isCenter) {
+    userInteracted = true;
+
     if (video.paused) {
       video.muted = false;
       video.play();
@@ -227,7 +231,7 @@ hammer.on("tap", (ev) => {
   }
 });
 
-/* ---------------- LIKE / FAV ---------------- */
+/* ---------------- UI ---------------- */
 
 function initLikes() {
   document.querySelectorAll(".like-btn").forEach(btn => {
@@ -245,15 +249,8 @@ function initFav() {
   });
 }
 
-/* ---------------- UI ---------------- */
-
 function updatePCountText() {
   pCount.innerText = `${currentIndex + 1}/${nbMedia}`;
-}
-
-function closeWatchTimePopup() {
-  popupWatchTime.style.display = "none";
-  backdrop.style.display = "none";
 }
 
 /* ---------------- RESIZE ---------------- */
