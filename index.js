@@ -135,6 +135,15 @@ function updateSlides() {
     if(currentIndex == slides.length-2 && slides.length-2 != -2){
       popupWatchTime.style.display = "flex";
       backdrop.style.display = "block";
+      slides.forEach((slide, index) => {
+
+        const video = slide.querySelector("video");
+
+        if (video) {
+          video.pause();
+          playIcon.style.display = "block";
+        }
+    });
     }
 }
 
