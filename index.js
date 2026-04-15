@@ -6,6 +6,7 @@ let slides = document.querySelectorAll(".slide");
 let currentIndex = 0;
 let nbMedia = 0;
 let height = window.innerHeight;
+let firstVideo = true;
 
 
 function isVideo(url) {
@@ -105,7 +106,9 @@ fetch("data.json")
 .catch(err => console.error(err));
 
 function updateSlides() {
-    playIcon.style.display = "none";
+    if(!firstVideo)
+      playIcon.style.display = "none";
+
     updatePCountText();
 
     slides.forEach((slide, index) => {
@@ -116,8 +119,11 @@ function updateSlides() {
         if (video) {
             if (index === currentIndex) {
                 video.currentTime = 0;
-                video.play();
+                if(!firstVideo){
+                  video.play();
+                }
                 video.muted = false;
+                firstVideo = false;
             } else {
                 video.pause();
                 video.currentTime = 0;
