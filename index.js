@@ -2,6 +2,8 @@ const container = document.getElementById("container");
 const playIcon = document.getElementById("play-button");
 const pCount = document.getElementById("p-count");
 let slides = document.querySelectorAll(".slide");
+const popupWatchTime = document.querySelector(".popup-watch-time");
+const backdrop = document.querySelector(".backdrop")
 
 let currentIndex = 0;
 let nbMedia = 0;
@@ -130,6 +132,10 @@ function updateSlides() {
             }
         }
     });
+    if(currentIndex == slides.length-2 && slides.length-2 != -2){
+      popupWatchTime.style.display = "flex";
+      backdrop.style.display = "block";
+    }
 }
 
 
@@ -214,4 +220,9 @@ function initFav() {
 
 function updatePCountText(){
   pCount.innerText = `${currentIndex+1}/${nbMedia}`
+}
+
+function closeWatchTimePopup(){
+  popupWatchTime.style.display = "none";
+  backdrop.style.display = "none";
 }
