@@ -51,7 +51,7 @@
     "tags": ["#cat", "#dcd", "#bon bidou"]
   },
   {
-    "url": "baton (4).jpg",
+    "url": "202604151727 (2).mp4",
     "profile": "baton",
     "profile_pic": "baton.jpeg",
     "description": "Vous avez la ref du teeshirt ?",
@@ -113,5 +113,15 @@
     "profile_pic": "margaux.jpeg",
     "description": "Lien de ma formation pour jeunes entrepreneurs en bio",
     "tags": ["#Le MILI", "#Formation"]
-  }]
+  }],
+
+  "static":[
+    {
+    "url": "final.jpg",
+    "profile": "LES ARDENTES",
+    "profile_pic": "ardente.png",
+    "description": "On a une surprise pour toi Mathis",
+    "tags": ["#Ardente", "#Kdo"]
+    }
+  ]
 }

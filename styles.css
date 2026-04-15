@@ -223,3 +223,20 @@ header .for-you::after{
   width: 62px;
   z-index: 1;
 }
+
+.liked svg{
+  fill: #fe2c55 !important;
+}
+
+.faved svg{
+  fill: #face15 !important;
+}
+
+.media-count{
+  position: absolute;
+  z-index: 1;
+  top: 10px;
+  right: 10px;
+  font-weight: 500;
+  filter: drop-shadow(0px 4px 7px #2b2b2b);
+}
