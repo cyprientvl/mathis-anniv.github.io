@@ -3,25 +3,28 @@ const playIcon = document.getElementById("play-button");
 const pCount = document.getElementById("p-count");
 let slides = document.querySelectorAll(".slide");
 const popupWatchTime = document.querySelector(".popup-watch-time");
-const backdrop = document.querySelector(".backdrop")
+const backdrop = document.querySelector(".backdrop");
 
 let currentIndex = 0;
 let nbMedia = 0;
 let height = window.innerHeight;
-let firstVideo = true;
+let userInteracted = false; // 🔥 IMPORTANT
 
+/* ---------------- UTIL ---------------- */
 
 function isVideo(url) {
   return url.endsWith(".mp4") || url.endsWith(".webm");
 }
 
 function randomCount() {
-  return Math.floor(Math.random() * 900 + 100) + "K"; 
+  return Math.floor(Math.random() * 900 + 100) + "K";
 }
 
 function randomSmall() {
   return Math.floor(Math.random() * 500 + 10);
 }
+
+/* ---------------- GENERATE ---------------- */
 function generateSlides(dataArray) {
   const container = document.getElementById("container");
 
@@ -75,7 +78,7 @@ function generateSlides(dataArray) {
 
         ${
           isVideo(item.url)
-            ? `<video class="main-image" src="assets/videos/${item.url}" loop muted playsinline></video>`
+            ? `<video class="main-image" src="assets/videos/${item.url}" loop muted playsinline preload="auto"></video>`
             : `<img class="main-image" src="assets/videos/${item.url}">`
         }
 
@@ -85,7 +88,6 @@ function generateSlides(dataArray) {
     container.appendChild(slide);
   });
 }
-
 function shuffleArray(array) {
   for (let i = array.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
@@ -94,80 +96,110 @@ function shuffleArray(array) {
   return array;
 }
 
+/* ---------------- FETCH ---------------- */
+
 fetch("data.json")
-.then(response => response.json())
+.then(res => res.json())
 .then(data => {
-    const shuffledData = shuffleArray(data.data);
-    generateSlides([...shuffledData, ...data.static]);
-    nbMedia = shuffledData.length + data.static.length;
-    slides = document.querySelectorAll(".slide");
-    updateSlides();
-    initLikes();
-    initFav();
-})
-.catch(err => console.error(err));
+  const shuffledData = shuffleArray(data.data);
 
-function updateSlides() {
-    if(!firstVideo)
-      playIcon.style.display = "none";
+  generateSlides([...shuffledData, ...data.static]);
 
-    updatePCountText();
+  nbMedia = shuffledData.length + data.static.length;
+  slides = document.querySelectorAll(".slide");
 
-    slides.forEach((slide, index) => {
-        slide.style.transform = `translateY(${(index - currentIndex) * 100}vh)`;
+  initVideos(); // 🔥 IMPORTANT
+  updateSlides();
+  initLikes();
+  initFav();
+});
 
-        const video = slide.querySelector("video");
+/* ---------------- VIDEO FIX ---------------- */
 
-        if (video) {
-            if (index === currentIndex) {
-                video.currentTime = 0;
-                if(!firstVideo){
-                  video.play();
-                }
-                video.muted = false;
-                firstVideo = false;
-            } else {
-                video.pause();
-                video.currentTime = 0;
-            }
-        }
-    });
-    if(currentIndex == slides.length-2 && slides.length-2 != -2){
-      popupWatchTime.style.display = "flex";
-      backdrop.style.display = "block";
-      slides.forEach((slide, index) => {
+function initVideos() {
+  slides.forEach((slide, index) => {
+    const video = slide.querySelector("video");
 
-        const video = slide.querySelector("video");
-
-        if (video) {
-          video.pause();
-          playIcon.style.display = "block";
-        }
-    });
+    if (video) {
+      video.muted = true;
+      video.play().catch(() => {
+        // normal si bloqué
+      });
     }
+  });
 }
 
+/* ---------------- UPDATE ---------------- */
 
+function updateSlides() {
+  updatePCountText();
+
+  slides.forEach((slide, index) => {
+    slide.style.transform = `translateY(${(index - currentIndex) * 100}vh)`;
+
+    const video = slide.querySelector("video");
+
+    if (video) {
+      if (index === currentIndex) {
+        video.currentTime = 0;
+
+        if (userInteracted) {
+          video.muted = false;
+        }
+
+        video.play().catch(() => {
+          playIcon.style.display = "block";
+        });
+
+        if(index == 0){
+          video.pause()
+        }
+
+      } else {
+        video.pause();
+        video.currentTime = 0;
+      }
+    }
+  });
+
+  // popup fin
+  if (currentIndex === slides.length - 2) {
+    popupWatchTime.style.display = "flex";
+    backdrop.style.display = "block";
+
+    slides.forEach(slide => {
+      const video = slide.querySelector("video");
+      if (video) video.pause();
+    });
+
+    playIcon.style.display = "block";
+  }
+}
+
+/* ---------------- GESTURES ---------------- */
 
 const hammer = new Hammer(container);
-
 hammer.get('swipe').set({ direction: Hammer.DIRECTION_VERTICAL });
 
 hammer.on("swipeup", () => {
-if (currentIndex < slides.length - 1) {
+  if (currentIndex < slides.length - 1) {
     currentIndex++;
     updateSlides();
-}
+  }
 });
 
 hammer.on("swipedown", () => {
-    if (currentIndex > 0) {
-        currentIndex--;
-        updateSlides();
-    }
+  if (currentIndex > 0) {
+    currentIndex--;
+    updateSlides();
+  }
 });
 
+/* ---------------- TAP ---------------- */
+
 hammer.on("tap", (ev) => {
+  userInteracted = true; // 🔥 DEBLOQUE SON
+
   const currentSlide = slides[currentIndex];
   const video = currentSlide.querySelector("video");
 
@@ -177,21 +209,15 @@ hammer.on("tap", (ev) => {
   const x = ev.center.x - rect.left;
   const y = ev.center.y - rect.top;
 
-  const centerZone = {
-    xMin: rect.width * 0.3,
-    xMax: rect.width * 0.7,
-    yMin: rect.height * 0.3,
-    yMax: rect.height * 0.7
-  };
-
   const isCenter =
-    x > centerZone.xMin &&
-    x < centerZone.xMax &&
-    y > centerZone.yMin &&
-    y < centerZone.yMax;
+    x > rect.width * 0.3 &&
+    x < rect.width * 0.7 &&
+    y > rect.height * 0.3 &&
+    y < rect.height * 0.7;
 
   if (isCenter) {
     if (video.paused) {
+      video.muted = false;
       video.play();
       playIcon.style.display = "none";
     } else {
@@ -201,15 +227,7 @@ hammer.on("tap", (ev) => {
   }
 });
 
-window.addEventListener("resize", () => {
-    height = window.innerHeight;
-    updateSlides();
-});
-
-window.addEventListener("load", () => {
-    height = window.innerHeight;
-    updateSlides();
-});
+/* ---------------- LIKE / FAV ---------------- */
 
 function initLikes() {
   document.querySelectorAll(".like-btn").forEach(btn => {
@@ -227,11 +245,20 @@ function initFav() {
   });
 }
 
-function updatePCountText(){
-  pCount.innerText = `${currentIndex+1}/${nbMedia}`
+/* ---------------- UI ---------------- */
+
+function updatePCountText() {
+  pCount.innerText = `${currentIndex + 1}/${nbMedia}`;
 }
 
-function closeWatchTimePopup(){
+function closeWatchTimePopup() {
   popupWatchTime.style.display = "none";
   backdrop.style.display = "none";
 }
+
+/* ---------------- RESIZE ---------------- */
+
+window.addEventListener("resize", () => {
+  height = window.innerHeight;
+  updateSlides();
+});
