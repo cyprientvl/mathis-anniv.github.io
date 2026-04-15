@@ -3,7 +3,6 @@ const playIcon = document.getElementById("play-button");
 let slides = document.querySelectorAll(".slide");
 
 let currentIndex = 0;
-let height = window.innerHeight;
 
 
 function isVideo(url) {
@@ -19,7 +18,10 @@ function randomSmall() {
 }
 function generateSlides(dataArray) {
   const container = document.getElementById("container");
-
+  if(!container)
+    return;
+  
+  console.log(container)
   dataArray.forEach(item => {
     const slide = document.createElement("div");
     slide.className = "slide";
@@ -70,7 +72,7 @@ function generateSlides(dataArray) {
 
         ${
           isVideo(item.url)
-            ? `<video class="main-image" src="assets/videos/${item.url}" muted playsinline></video>`
+            ? `<video class="main-image" src="assets/videos/${item.url}" muted playsinline loop></video>`
             : `<img class="main-image" src="assets/videos/${item.url}">`
         }
 
@@ -84,7 +86,8 @@ function generateSlides(dataArray) {
 fetch("data.json")
 .then(response => response.json())
 .then(data => {
-    generateSlides(data.data);
+  console.log(data)
+    generateSlides(data);
     slides = document.querySelectorAll(".slide");
     updateSlides();
 })
@@ -117,19 +120,32 @@ const hammer = new Hammer(container);
 
 hammer.get('swipe').set({ direction: Hammer.DIRECTION_VERTICAL });
 
-hammer.on("swipeup", () => {
-if (currentIndex < slides.length - 1) {
-    currentIndex++;
-    updateSlides();
-}
+hammer.on("swipeup", goNext);
+hammer.on("swipedown", goPrev);
+
+document.addEventListener("keydown", (e) => {
+  if (e.key === "ArrowDown") {
+    goNext();
+  }
+
+  if (e.key === "ArrowUp") {
+    goPrev();
+  }
 });
 
-hammer.on("swipedown", () => {
-    if (currentIndex > 0) {
-        currentIndex--;
-        updateSlides();
-    }
-});
+function goNext() {
+  if (currentIndex < slides.length - 1) {
+    currentIndex++;
+    updateSlides();
+  }
+}
+
+function goPrev() {
+  if (currentIndex > 0) {
+    currentIndex--;
+    updateSlides();
+  }
+}
 
 hammer.on("tap", (ev) => {
   const currentSlide = slides[currentIndex];
@@ -166,11 +182,6 @@ hammer.on("tap", (ev) => {
 });
 
 window.addEventListener("resize", () => {
-    height = window.innerHeight;
-    updateSlides();
-});
-
-window.addEventListener("load", () => {
     height = window.innerHeight;
     updateSlides();
 });
