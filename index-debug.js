@@ -168,7 +168,7 @@ function shuffleArray(array) {
 
 /* ---- FETCH ---- */
 
-fetch("data.json")
+fetch("data-debug.json")
   .then(res => res.json())
   .then(data => {
     const shuffledData = shuffleArray(data.data);
