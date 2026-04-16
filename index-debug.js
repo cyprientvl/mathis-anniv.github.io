@@ -11,8 +11,6 @@ let nbMedia = 0;
 let height = window.innerHeight;
 let userInteracted = false;
 
-/* ---- SAFE PLAY ---- */
-
 function safePlay(video, resetTime = true) {
   if (!video) return;
 
@@ -27,8 +25,6 @@ function safePlay(video, resetTime = true) {
   }
 }
 
-/* ---- GESTION DES SOURCES (FIX MÉMOIRE) ---- */
-
 const PRELOAD_RANGE = 2;
 
 function manageVideoSources() {
@@ -39,14 +35,12 @@ function manageVideoSources() {
     const distance = Math.abs(index - currentIndex);
 
     if (distance <= PRELOAD_RANGE) {
-      // Recharge la source si elle a été déchargée
       const src = video.dataset.src;
       if (src && video.getAttribute("src") !== src) {
         video.src = src;
         video.load();
       }
     } else {
-      // Décharge les vidéos éloignées pour libérer la mémoire
       if (video.getAttribute("src")) {
         video.pause();
         video.removeAttribute("src");
@@ -55,8 +49,6 @@ function manageVideoSources() {
     }
   });
 }
-
-/* ---- GLOBAL UNLOCK ---- */
 
 function unlockVideos() {
   if (userInteracted) return;
@@ -75,7 +67,6 @@ document.addEventListener("touchstart", unlockVideos, { once: true });
 document.addEventListener("click", unlockVideos, { once: true });
 document.addEventListener("keydown", unlockVideos, { once: true });
 
-/* ---- UTILS ---- */
 
 function isVideo(url) {
   return url.endsWith(".mp4") || url.endsWith(".webm");
@@ -89,7 +80,6 @@ function randomSmall() {
   return Math.floor(Math.random() * 500 + 10);
 }
 
-/* ---- GENERATE ---- */
 
 function generateSlides(dataArray) {
   const container = document.getElementById("container");
@@ -98,7 +88,6 @@ function generateSlides(dataArray) {
     const slide = document.createElement("div");
     slide.className = "slide";
 
-    // On utilise data-src au lieu de src pour les vidéos — chargement contrôlé
     const mediaHTML = isVideo(item.url)
       ? `<video class="main-image" data-src="assets/videos/${item.url}" loop muted playsinline preload="auto"></video>`
       : `<img class="main-image" src="assets/videos/${item.url}">`;
@@ -156,7 +145,6 @@ function generateSlides(dataArray) {
   });
 }
 
-/* ---- SHUFFLE ---- */
 
 function shuffleArray(array) {
   for (let i = array.length - 1; i > 0; i--) {
@@ -166,9 +154,7 @@ function shuffleArray(array) {
   return array;
 }
 
-/* ---- FETCH ---- */
-
-fetch("data-debug.json")
+fetch("data.json")
   .then(res => res.json())
   .then(data => {
     const shuffledData = shuffleArray(data.data);
@@ -178,7 +164,6 @@ fetch("data-debug.json")
     nbMedia = shuffledData.length + data.static.length;
     slides = document.querySelectorAll(".slide");
 
-    // Charge les sources des vidéos proches du départ
     manageVideoSources();
     updateSlides();
     initLikes();
@@ -186,12 +171,10 @@ fetch("data-debug.json")
   })
   .catch(console.error);
 
-/* ---- UPDATE SLIDES ---- */
 
 function updateSlides() {
   updatePCountText();
 
-  // Gère le chargement/déchargement des sources vidéo
   manageVideoSources();
   playIcon.style.display = "none";
 
@@ -202,7 +185,6 @@ function updateSlides() {
     if (!video) return;
 
     if (index === currentIndex) {
-      // Slide active : joue la vidéo
       if(currentIndex == 0){
          playIcon.style.display = "block";
         return;
@@ -211,20 +193,17 @@ function updateSlides() {
 
       video.muted = !userInteracted;
 
-      // Attend que la source soit chargée avant de jouer
       if (video.readyState >= 2) {
         safePlay(video);
       } else {
         video.addEventListener("canplay", () => safePlay(video), { once: true });
       }
     } else {
-      // Slide inactive : stop
       video.pause();
       video.currentTime = 0;
     }
   });
 
-  // Popup fin de contenu
   if (currentIndex === slides.length - 2) {
     popupWatchTime.style.display = "flex";
     backdrop.style.display = "block";
@@ -238,7 +217,6 @@ function updateSlides() {
   }
 }
 
-/* ---- SWIPE ---- */
 
 const hammer = new Hammer(container);
 hammer.get("swipe").set({ direction: Hammer.DIRECTION_VERTICAL });
@@ -257,7 +235,6 @@ hammer.on("swipedown", () => {
   }
 });
 
-/* ---- TAP PLAY/PAUSE ---- */
 
 hammer.on("tap", (ev) => {
   const slide = slides[currentIndex];
@@ -289,7 +266,6 @@ hammer.on("tap", (ev) => {
   }
 });
 
-/* ---- UI ---- */
 
 function initLikes() {
   document.querySelectorAll(".like-btn").forEach(btn => {
@@ -307,7 +283,6 @@ function updatePCountText() {
   pCount.innerText = `${currentIndex + 1}/${nbMedia}`;
 }
 
-/* ---- RESIZE ---- */
 
 window.addEventListener("resize", () => {
   height = window.innerHeight;
