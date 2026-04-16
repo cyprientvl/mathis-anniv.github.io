@@ -13,10 +13,11 @@ let userInteracted = false;
 
 /* ---- SAFE PLAY ---- */
 
-function safePlay(video) {
+function safePlay(video, resetTime = true) {
   if (!video) return;
 
-  video.currentTime = 0;
+  if(resetTime)
+    video.currentTime = 0;
 
   const p = video.play();
   if (p && typeof p.catch === "function") {
@@ -192,6 +193,7 @@ function updateSlides() {
 
   // Gère le chargement/déchargement des sources vidéo
   manageVideoSources();
+  playIcon.style.display = "none";
 
   slides.forEach((slide, index) => {
     slide.style.transform = `translateY(${(index - currentIndex) * 100}vh)`;
@@ -201,6 +203,12 @@ function updateSlides() {
 
     if (index === currentIndex) {
       // Slide active : joue la vidéo
+      if(currentIndex == 0){
+         playIcon.style.display = "block";
+        return;
+
+      }
+
       video.muted = !userInteracted;
 
       // Attend que la source soit chargée avant de jouer
@@ -272,7 +280,7 @@ hammer.on("tap", (ev) => {
 
     if (video.paused) {
       video.muted = false;
-      safePlay(video);
+      safePlay(video, false);
       playIcon.style.display = "none";
     } else {
       video.pause();
