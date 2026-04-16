@@ -11,39 +11,62 @@ let nbMedia = 0;
 let height = window.innerHeight;
 let userInteracted = false;
 
-/* ---------------- SAFE PLAY (CRUCIAL FIX) ---------------- */
+/* ---- SAFE PLAY ---- */
 
-function safePlay(video, firstVideo) {
+function safePlay(video) {
   if (!video) return;
 
-  video.pause();
   video.currentTime = 0;
 
-  const tryPlay = () => {
-    const p = video.play();
-    if (p && typeof p.catch === "function") {
-      p.catch(() => {
-        playIcon.style.display = "block";
-      });
-    }
-  };
-
-  if(!firstVideo)
-    setTimeout(tryPlay, 60);
+  const p = video.play();
+  if (p && typeof p.catch === "function") {
+    p.catch(() => {
+      playIcon.style.display = "block";
+    });
+  }
 }
 
-/* ---------------- GLOBAL UNLOCK ---------------- */
+/* ---- GESTION DES SOURCES (FIX MÉMOIRE) ---- */
+
+const PRELOAD_RANGE = 2;
+
+function manageVideoSources() {
+  slides.forEach((slide, index) => {
+    const video = slide.querySelector("video");
+    if (!video) return;
+
+    const distance = Math.abs(index - currentIndex);
+
+    if (distance <= PRELOAD_RANGE) {
+      // Recharge la source si elle a été déchargée
+      const src = video.dataset.src;
+      if (src && video.getAttribute("src") !== src) {
+        video.src = src;
+        video.load();
+      }
+    } else {
+      // Décharge les vidéos éloignées pour libérer la mémoire
+      if (video.getAttribute("src")) {
+        video.pause();
+        video.removeAttribute("src");
+        video.load();
+      }
+    }
+  });
+}
+
+/* ---- GLOBAL UNLOCK ---- */
 
 function unlockVideos() {
   if (userInteracted) return;
   userInteracted = true;
 
-  const video = slides[currentIndex]?.querySelector("video");
+  playIcon.style.display = "none";
 
+  const video = slides[currentIndex]?.querySelector("video");
   if (video) {
     video.muted = false;
     safePlay(video);
-    playIcon.style.display = "none";
   }
 }
 
@@ -51,7 +74,7 @@ document.addEventListener("touchstart", unlockVideos, { once: true });
 document.addEventListener("click", unlockVideos, { once: true });
 document.addEventListener("keydown", unlockVideos, { once: true });
 
-/* ---------------- UTILS ---------------- */
+/* ---- UTILS ---- */
 
 function isVideo(url) {
   return url.endsWith(".mp4") || url.endsWith(".webm");
@@ -65,7 +88,7 @@ function randomSmall() {
   return Math.floor(Math.random() * 500 + 10);
 }
 
-/* ---------------- GENERATE ---------------- */
+/* ---- GENERATE ---- */
 
 function generateSlides(dataArray) {
   const container = document.getElementById("container");
@@ -73,6 +96,11 @@ function generateSlides(dataArray) {
   dataArray.forEach(item => {
     const slide = document.createElement("div");
     slide.className = "slide";
+
+    // On utilise data-src au lieu de src pour les vidéos — chargement contrôlé
+    const mediaHTML = isVideo(item.url)
+      ? `<video class="main-image" data-src="assets/videos/${item.url}" loop muted playsinline preload="auto"></video>`
+      : `<img class="main-image" src="assets/videos/${item.url}">`;
 
     slide.innerHTML = `
       <div class="slide-template">
@@ -85,22 +113,22 @@ function generateSlides(dataArray) {
           </div>  
 
           <div class="action-item like-btn">
-            <svg viewBox="0 0 48 48" fill="#fff" xmlns="http://www.w3.org/2000/svg" width="1em" height="1em"><g  clip-path="url(#Icon_Color-Like_Shadow_Alt_1_svg__a)"><path d="M24 9.44c3.2-4.03 7.61-5.56 12-4.67 2.31.47 5.59 2.28 7.75 5.48 2.26 3.32 3.21 7.99.98 13.85-1.75 4.57-5.5 8.83-9.28 12.2a56.6 56.6 0 0 1-10.52 7.47l-.93.49-.93-.49a56.6 56.6 0 0 1-10.52-7.47c-3.78-3.37-7.53-7.63-9.28-12.2-2.24-5.86-1.28-10.53.98-13.85C6.4 7.05 9.69 5.24 12 4.77c4.39-.9 8.8.64 12 4.67Z" fill-opacity="0.9" shape-rendering="crispEdges"></path></g><defs><clipPath id="Icon_Color-Like_Shadow_Alt_1_svg__a"><path fill="#fff" d="M0 0h48v48H0z"></path></clipPath><filter id="Icon_Color-Like_Shadow_Alt_1_svg__b" x="-2.5" y="1.52" width="53" height="48.73" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB"><feFlood flood-opacity="0" result="BackgroundImageFix"></feFlood><feColorMatrix in="SourceAlpha" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha"></feColorMatrix><feOffset dy="1.5"></feOffset><feGaussianBlur stdDeviation="2.25"></feGaussianBlur><feComposite in2="hardAlpha" operator="out"></feComposite><feColorMatrix values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.2 0"></feColorMatrix><feBlend in2="BackgroundImageFix" result="effect1_dropShadow_81245_5661"></feBlend><feColorMatrix in="SourceAlpha" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha"></feColorMatrix><feOffset dy="1.5"></feOffset><feGaussianBlur stdDeviation="0.75"></feGaussianBlur><feComposite in2="hardAlpha" operator="out"></feComposite><feColorMatrix values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.15 0"></feColorMatrix><feBlend in2="effect1_dropShadow_81245_5661" result="effect2_dropShadow_81245_5661"></feBlend><feBlend in="SourceGraphic" in2="effect2_dropShadow_81245_5661" result="shape"></feBlend></filter></defs></svg>                        
+            <svg viewBox="0 0 48 48" fill="#fff" xmlns="http://www.w3.org/2000/svg" width="1em" height="1em"><g  clip-path="url(#Icon_Color-Like_Shadow_Alt_1_svg__a)"><path d="M24 9.44c3.2-4.03 7.61-5.56 12-4.67 2.31.47 5.59 2.28 7.75 5.48 2.26 3.32 3.21 7.99.98 13.85-1.75 4.57-5.5 8.83-9.28 12.2a56.6 56.6 0 0 1-10.52 7.47l-.93.49-.93-.49a56.6 56.6 0 0 1-10.52-7.47c-3.78-3.37-7.53-7.63-9.28-12.2-2.24-5.86-1.28-10.53.98-13.85C6.4 7.05 9.69 5.24 12 4.77c4.39-.9 8.8.64 12 4.67Z" fill-opacity="0.9" shape-rendering="crispEdges"></path></g><defs><clipPath id="Icon_Color-Like_Shadow_Alt_1_svg__a"><path fill="#fff" d="M0 0h48v48H0z"></path></clipPath></defs></svg>                        
             <p>${randomCount()}</p>
           </div>
 
           <div class="action-item">
-            <svg viewBox="0 0 48 48" fill="#fff" xmlns="http://www.w3.org/2000/svg" width="1em" height="1em"><g ><path fill-rule="evenodd" clip-rule="evenodd" d="M38.5 35.31c4.1-4.11 6.5-8.4 6.5-13.38C45 11.8 35.73 3.6 24.3 3.6S3.6 11.8 3.6 21.93C3.6 32.05 13.17 39 24.6 39v3.36c0 1.06 1.1 1.75 2.04 1.24 2.92-1.58 8.33-4.76 11.85-8.29ZM14.23 19.46a2.95 2.95 0 0 1 2.96 2.93 2.95 2.95 0 0 1-2.96 2.94 2.95 2.95 0 0 1-2.95-2.94 2.95 2.95 0 0 1 2.95-2.93Zm13.02 2.93a2.95 2.95 0 0 0-2.96-2.93 2.95 2.95 0 0 0-2.96 2.93 2.95 2.95 0 0 0 2.96 2.94 2.95 2.95 0 0 0 2.96-2.94Zm7.1-2.93a2.95 2.95 0 0 1 2.95 2.93 2.95 2.95 0 0 1-2.96 2.94 2.95 2.95 0 0 1-2.95-2.94 2.95 2.95 0 0 1 2.95-2.93Z" fill="#fff" fill-opacity="0.9"></path></g><path fill-rule="evenodd" clip-rule="evenodd" d="M24.6 39s11.47-.89 16.26-7.02c-4.8 6.75-9.59 10.43-13.78 11.66C22.88 44.87 24.6 39 24.6 39Z" fill="#000" fill-opacity="0.03"></path><defs><filter id="Icon_Color-Comment_Shadow_svg__a" x="1.2" y="2.4" width="46.2" height="44.97" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB"><feFlood flood-opacity="0" result="BackgroundImageFix"></feFlood><feColorMatrix in="SourceAlpha" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha"></feColorMatrix><feOffset dy="1.2"></feOffset><feGaussianBlur stdDeviation="1.2"></feGaussianBlur><feColorMatrix values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.15 0"></feColorMatrix><feBlend in2="BackgroundImageFix" result="effect1_dropShadow_1_2867"></feBlend><feBlend in="SourceGraphic" in2="effect1_dropShadow_1_2867" result="shape"></feBlend></filter></defs></svg>                        
+            <svg viewBox="0 0 48 48" fill="#fff" xmlns="http://www.w3.org/2000/svg" width="1em" height="1em"><g ><path fill-rule="evenodd" clip-rule="evenodd" d="M38.5 35.31c4.1-4.11 6.5-8.4 6.5-13.38C45 11.8 35.73 3.6 24.3 3.6S3.6 11.8 3.6 21.93C3.6 32.05 13.17 39 24.6 39v3.36c0 1.06 1.1 1.75 2.04 1.24 2.92-1.58 8.33-4.76 11.85-8.29ZM14.23 19.46a2.95 2.95 0 0 1 2.96 2.93 2.95 2.95 0 0 1-2.96 2.94 2.95 2.95 0 0 1-2.95-2.94 2.95 2.95 0 0 1 2.95-2.93Zm13.02 2.93a2.95 2.95 0 0 0-2.96-2.93 2.95 2.95 0 0 0-2.96 2.93 2.95 2.95 0 0 0 2.96 2.94 2.95 2.95 0 0 0 2.96-2.94Zm7.1-2.93a2.95 2.95 0 0 1 2.95 2.93 2.95 2.95 0 0 1-2.96 2.94 2.95 2.95 0 0 1-2.95-2.94 2.95 2.95 0 0 1 2.95-2.93Z" fill="#fff" fill-opacity="0.9"></path></g></svg>                        
             <p>${randomSmall()}</p>
           </div>
 
           <div class="action-item fav-btn">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="#fff" viewBox="0 0 24 24" width="24" height="24"><path d="M4 4.5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v15.13a1 1 0 0 1-1.555.831l-6.167-4.12a.5.5 0 0 0-.556 0l-6.167 4.12A1 1 0 0 1 4 19.63z"></path><path fill="currentColor" fill-opacity="0.03" d="M4.032 4.144Q4 4.317 4 4.5v15.13a1 1 0 0 0 1.555.831l6.167-4.12a.5.5 0 0 1 .41-.066l-.427-.198a1.49 1.49 0 0 0-1.377.063c-.581.339-1.45.85-2.25 1.339-.59.359-1.427.695-2.187.962-.929.325-1.86-.387-1.86-1.37zm8.251 12.202 6.162 4.115A1 1 0 0 0 20 19.63V4.5a2 2 0 0 0-1.123-1.798c.21.254.334.58.33.936a117 117 0 0 1-.896 13.408c-.124.99-1.17 1.553-2.076 1.133z"></path></svg>                        
+            <svg xmlns="http://www.w3.org/2000/svg" fill="#fff" viewBox="0 0 24 24" width="24" height="24"><path d="M4 4.5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v15.13a1 1 0 0 1-1.555.831l-6.167-4.12a.5.5 0 0 0-.556 0l-6.167 4.12A1 1 0 0 1 4 19.63z"></path></svg>                        
             <p>${randomSmall()}</p>
           </div>
 
           <div class="action-item">
-            <svg viewBox="0 0 48 48" fill="#fff" xmlns="http://www.w3.org/2000/svg" width="1em" height="1em"><g  clip-path="url(#Icon_Color-Share_Shadow_Alt_2_svg__a)"><path fill-rule="evenodd" clip-rule="evenodd" d="M25.56 4.07a1.98 1.98 0 0 0-2.15-.42 1.95 1.95 0 0 0-1.21 1.8v8.34c-5.4.35-10.04 2.2-13.43 5.68C4.97 23.35 3 29.03 3 36.19c0 .79.48 1.5 1.22 1.8.73.3 1.58.13 2.14-.42 3.34-3.31 7.65-4.56 11.25-4.95 1.8-.2 3.37-.18 4.5-.1h.09v9.03c0 .78.46 1.48 1.18 1.79.72.3 1.56.16 2.13-.37l18.87-17.49a1.94 1.94 0 0 0 .04-2.8L25.56 4.07Z" fill="#fff" fill-opacity="0.9" shape-rendering="crispEdges"></path></g><defs><clipPath id="Icon_Color-Share_Shadow_Alt_2_svg__a"><path fill="#fff" d="M0 0h48v48H0z"></path></clipPath><filter id="Icon_Color-Share_Shadow_Alt_2_svg__b" x="-1.5" y="0.5" width="51" height="49" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB"><feFlood flood-opacity="0" result="BackgroundImageFix"></feFlood><feColorMatrix in="SourceAlpha" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha"></feColorMatrix><feOffset dy="1.5"></feOffset><feGaussianBlur stdDeviation="2.25"></feGaussianBlur><feComposite in2="hardAlpha" operator="out"></feComposite><feColorMatrix values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.2 0"></feColorMatrix><feBlend in2="BackgroundImageFix" result="effect1_dropShadow_81245_5665"></feBlend><feColorMatrix in="SourceAlpha" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha"></feColorMatrix><feOffset dy="1.5"></feOffset><feGaussianBlur stdDeviation="0.75"></feGaussianBlur><feComposite in2="hardAlpha" operator="out"></feComposite><feColorMatrix values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.15 0"></feColorMatrix><feBlend in2="effect1_dropShadow_81245_5665" result="effect2_dropShadow_81245_5665"></feBlend><feBlend in="SourceGraphic" in2="effect2_dropShadow_81245_5665" result="shape"></feBlend></filter></defs></svg>
+            <svg viewBox="0 0 48 48" fill="#fff" xmlns="http://www.w3.org/2000/svg" width="1em" height="1em"><g  clip-path="url(#Icon_Color-Share_Shadow_Alt_2_svg__a)"><path fill-rule="evenodd" clip-rule="evenodd" d="M25.56 4.07a1.98 1.98 0 0 0-2.15-.42 1.95 1.95 0 0 0-1.21 1.8v8.34c-5.4.35-10.04 2.2-13.43 5.68C4.97 23.35 3 29.03 3 36.19c0 .79.48 1.5 1.22 1.8.73.3 1.58.13 2.14-.42 3.34-3.31 7.65-4.56 11.25-4.95 1.8-.2 3.37-.18 4.5-.1h.09v9.03c0 .78.46 1.48 1.18 1.79.72.3 1.56.16 2.13-.37l18.87-17.49a1.94 1.94 0 0 0 .04-2.8L25.56 4.07Z" fill="#fff" fill-opacity="0.9" shape-rendering="crispEdges"></path></g><defs><clipPath id="Icon_Color-Share_Shadow_Alt_2_svg__a"><path fill="#fff" d="M0 0h48v48H0z"></path></clipPath></defs></svg>
             <p>${randomSmall()}</p>
           </div>
 
@@ -118,11 +146,7 @@ function generateSlides(dataArray) {
           </div>
         </div>
 
-        ${
-          isVideo(item.url)
-            ? `<video class="main-image" src="assets/videos/${item.url}" loop muted playsinline preload="auto"></video>`
-            : `<img class="main-image" src="assets/videos/${item.url}">`
-        }
+        ${mediaHTML}
 
       </div>
     `;
@@ -131,7 +155,7 @@ function generateSlides(dataArray) {
   });
 }
 
-/* ---------------- SHUFFLE ---------------- */
+/* ---- SHUFFLE ---- */
 
 function shuffleArray(array) {
   for (let i = array.length - 1; i > 0; i--) {
@@ -141,66 +165,75 @@ function shuffleArray(array) {
   return array;
 }
 
-/* ---------------- FETCH ---------------- */
+/* ---- FETCH ---- */
 
 fetch("data.json")
-.then(res => res.json())
-.then(data => {
-  const shuffledData = shuffleArray(data.data);
+  .then(res => res.json())
+  .then(data => {
+    const shuffledData = shuffleArray(data.data);
 
-  generateSlides([...shuffledData, ...data.static]);
+    generateSlides([...shuffledData, ...data.static]);
 
-  nbMedia = shuffledData.length + data.static.length;
-  slides = document.querySelectorAll(".slide");
+    nbMedia = shuffledData.length + data.static.length;
+    slides = document.querySelectorAll(".slide");
 
-  updateSlides();
-  initLikes();
-  initFav();
-})
-.catch(console.error);
+    // Charge les sources des vidéos proches du départ
+    manageVideoSources();
+    updateSlides();
+    initLikes();
+    initFav();
+  })
+  .catch(console.error);
 
-/* ---------------- UPDATE SLIDES ---------------- */
+/* ---- UPDATE SLIDES ---- */
 
 function updateSlides() {
   updatePCountText();
+
+  // Gère le chargement/déchargement des sources vidéo
+  manageVideoSources();
 
   slides.forEach((slide, index) => {
     slide.style.transform = `translateY(${(index - currentIndex) * 100}vh)`;
 
     const video = slide.querySelector("video");
-
     if (!video) return;
 
-    // STOP toutes les vidéos
-    video.pause();
-    video.currentTime = 0;
-
-    // PLAY uniquement active
     if (index === currentIndex) {
+      // Slide active : joue la vidéo
       video.muted = !userInteracted;
-      safePlay(video, index == 0);
+
+      // Attend que la source soit chargée avant de jouer
+      if (video.readyState >= 2) {
+        safePlay(video);
+      } else {
+        video.addEventListener("canplay", () => safePlay(video), { once: true });
+      }
+    } else {
+      // Slide inactive : stop
+      video.pause();
+      video.currentTime = 0;
     }
   });
 
-  // popup fin
+  // Popup fin de contenu
   if (currentIndex === slides.length - 2) {
     popupWatchTime.style.display = "flex";
     backdrop.style.display = "block";
-    playIcon.style.display = "block"
+    playIcon.style.display = "block";
     setTimeout(() => {
       slides.forEach(slide => {
-      const video = slide.querySelector("video");
-      if (video) video.pause();
-    });
-    }, 500)
-    
+        const video = slide.querySelector("video");
+        if (video) video.pause();
+      });
+    }, 500);
   }
 }
 
-/* ---------------- SWIPE ---------------- */
+/* ---- SWIPE ---- */
 
 const hammer = new Hammer(container);
-hammer.get('swipe').set({ direction: Hammer.DIRECTION_VERTICAL });
+hammer.get("swipe").set({ direction: Hammer.DIRECTION_VERTICAL });
 
 hammer.on("swipeup", () => {
   if (currentIndex < slides.length - 1) {
@@ -216,7 +249,7 @@ hammer.on("swipedown", () => {
   }
 });
 
-/* ---------------- TAP PLAY ---------------- */
+/* ---- TAP PLAY/PAUSE ---- */
 
 hammer.on("tap", (ev) => {
   const slide = slides[currentIndex];
@@ -248,21 +281,17 @@ hammer.on("tap", (ev) => {
   }
 });
 
-/* ---------------- UI ---------------- */
+/* ---- UI ---- */
 
 function initLikes() {
   document.querySelectorAll(".like-btn").forEach(btn => {
-    btn.addEventListener("click", () => {
-      btn.classList.toggle("liked");
-    });
+    btn.addEventListener("click", () => btn.classList.toggle("liked"));
   });
 }
 
 function initFav() {
   document.querySelectorAll(".fav-btn").forEach(btn => {
-    btn.addEventListener("click", () => {
-      btn.classList.toggle("faved");
-    });
+    btn.addEventListener("click", () => btn.classList.toggle("faved"));
   });
 }
 
@@ -270,14 +299,14 @@ function updatePCountText() {
   pCount.innerText = `${currentIndex + 1}/${nbMedia}`;
 }
 
-/* ---------------- RESIZE ---------------- */
+/* ---- RESIZE ---- */
 
 window.addEventListener("resize", () => {
   height = window.innerHeight;
   updateSlides();
 });
 
-function closeWatchTimePopup(){
+function closeWatchTimePopup() {
   popupWatchTime.style.display = "none";
-    backdrop.style.display = "none";
+  backdrop.style.display = "none";
 }

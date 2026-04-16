@@ -1,36 +1,55 @@
 const container = document.getElementById("container");
 const playIcon = document.getElementById("play-button");
 const pCount = document.getElementById("p-count");
-let slides = document.querySelectorAll(".slide");
 const popupWatchTime = document.querySelector(".popup-watch-time");
 const backdrop = document.querySelector(".backdrop");
+
+let slides = document.querySelectorAll(".slide");
 
 let currentIndex = 0;
 let nbMedia = 0;
 let height = window.innerHeight;
-
-// 🔥 IMPORTANT: déblocage global autoplay
 let userInteracted = false;
 
-/* ---------------- UNLOCK GLOBAL AUTOPLAY ---------------- */
+/* ---------------- SAFE PLAY (CRUCIAL FIX) ---------------- */
+
+function safePlay(video, firstVideo) {
+  if (!video) return;
+
+  video.pause();
+  video.currentTime = 0;
+
+  const tryPlay = () => {
+    const p = video.play();
+    if (p && typeof p.catch === "function") {
+      p.catch(() => {
+        playIcon.style.display = "block";
+      });
+    }
+  };
+
+  if(!firstVideo)
+    setTimeout(tryPlay, 60);
+}
+
+/* ---------------- GLOBAL UNLOCK ---------------- */
 
 function unlockVideos() {
   if (userInteracted) return;
   userInteracted = true;
 
-  const currentSlide = slides[currentIndex];
-  const video = currentSlide?.querySelector("video");
+  const video = slides[currentIndex]?.querySelector("video");
 
   if (video) {
     video.muted = false;
-    video.play().catch(() => {});
+    safePlay(video, false);
     playIcon.style.display = "none";
   }
 }
 
-window.addEventListener("click", unlockVideos, { once: true });
-window.addEventListener("touchstart", unlockVideos, { once: true });
-window.addEventListener("keydown", unlockVideos, { once: true });
+document.addEventListener("touchstart", unlockVideos, { once: true });
+document.addEventListener("click", unlockVideos, { once: true });
+document.addEventListener("keydown", unlockVideos, { once: true });
 
 /* ---------------- UTILS ---------------- */
 
@@ -45,7 +64,9 @@ function randomCount() {
 function randomSmall() {
   return Math.floor(Math.random() * 500 + 10);
 }
+
 /* ---------------- GENERATE ---------------- */
+
 function generateSlides(dataArray) {
   const container = document.getElementById("container");
 
@@ -109,6 +130,7 @@ function generateSlides(dataArray) {
     container.appendChild(slide);
   });
 }
+
 /* ---------------- SHUFFLE ---------------- */
 
 function shuffleArray(array) {
@@ -119,7 +141,7 @@ function shuffleArray(array) {
   return array;
 }
 
-/* ---------------- FETCH DATA ---------------- */
+/* ---------------- FETCH ---------------- */
 
 fetch("data.json")
 .then(res => res.json())
@@ -135,9 +157,9 @@ fetch("data.json")
   initLikes();
   initFav();
 })
-.catch(err => console.error(err));
+.catch(console.error);
 
-/* ---------------- SLIDES ---------------- */
+/* ---------------- UPDATE SLIDES ---------------- */
 
 function updateSlides() {
   updatePCountText();
@@ -155,16 +177,8 @@ function updateSlides() {
 
     // PLAY uniquement active
     if (index === currentIndex) {
-
       video.muted = !userInteracted;
-
-      const playPromise = video.play();
-
-      if (playPromise !== undefined) {
-        playPromise.catch(() => {
-          playIcon.style.display = "block";
-        });
-      }
+      safePlay(video, index == 0);
     }
   });
 
@@ -172,15 +186,18 @@ function updateSlides() {
   if (currentIndex === slides.length - 2) {
     popupWatchTime.style.display = "flex";
     backdrop.style.display = "block";
-
-    slides.forEach(slide => {
+    playIcon.style.display = "block"
+    setTimeout(() => {
+      slides.forEach(slide => {
       const video = slide.querySelector("video");
       if (video) video.pause();
     });
+    }, 500)
+    
   }
 }
 
-/* ---------------- GESTURES ---------------- */
+/* ---------------- SWIPE ---------------- */
 
 const hammer = new Hammer(container);
 hammer.get('swipe').set({ direction: Hammer.DIRECTION_VERTICAL });
@@ -199,15 +216,15 @@ hammer.on("swipedown", () => {
   }
 });
 
-/* ---------------- TAP PLAY/PAUSE ---------------- */
+/* ---------------- TAP PLAY ---------------- */
 
 hammer.on("tap", (ev) => {
-  const currentSlide = slides[currentIndex];
-  const video = currentSlide.querySelector("video");
+  const slide = slides[currentIndex];
+  const video = slide?.querySelector("video");
 
   if (!video) return;
 
-  const rect = currentSlide.getBoundingClientRect();
+  const rect = slide.getBoundingClientRect();
   const x = ev.center.x - rect.left;
   const y = ev.center.y - rect.top;
 
@@ -222,7 +239,7 @@ hammer.on("tap", (ev) => {
 
     if (video.paused) {
       video.muted = false;
-      video.play();
+      safePlay(video, false);
       playIcon.style.display = "none";
     } else {
       video.pause();
@@ -259,3 +276,8 @@ window.addEventListener("resize", () => {
   height = window.innerHeight;
   updateSlides();
 });
+
+function closeWatchTimePopup(){
+  popupWatchTime.style.display = "none";
+    backdrop.style.display = "none";
+}
